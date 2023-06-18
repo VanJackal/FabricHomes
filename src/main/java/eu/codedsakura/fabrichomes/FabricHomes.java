@@ -14,12 +14,13 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.registry.Registry;
-import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -120,20 +121,33 @@ public class FabricHomes implements ModInitializer {
                 .stream().filter(v -> v.getName().equals(finalName)).findFirst();
 
         if (home.isEmpty()) {
-            ctx.getSource().sendFeedback(Text.literal("This home does not exist").formatted(Formatting.RED), false);
+            ctx.getSource().sendFeedback(() -> Text.literal("This home does not exist").formatted(Formatting.RED), false);
             return 0;
         }
 
         if (checkCooldown(player)) return 1;
 
-        TeleportUtils.genericTeleport((boolean) config.getValue("bossbar"), (int) config.getValue("stand-still"), player, () -> {
-            player.teleport(
-                    ctx.getSource().getServer().getWorld(RegistryKey.of(Registry.WORLD_KEY, home.get().getDimID())),
-                    home.get().getX(), home.get().getY(), home.get().geyZ(),
-                    home.get().getYaw(), home.get().getPitch());
-            recentRequests.put(player.getUuid(), Instant.now().getEpochSecond());
-        });
+        Identifier dimId = home.get().getDimID();
+        RegistryKey<World> dimension = null;
+        //not sure if this is the right way to do this, but it should work
+        for (RegistryKey<World> dim : ctx.getSource().getServer().getWorldRegistryKeys()){
+            if (dim.getValue().equals(dimId) ) {
+                dimension = dim;
+            }
+        }
 
+        if(dimension != null) {
+            RegistryKey<World> finalDimension = dimension;
+            TeleportUtils.genericTeleport((boolean) config.getValue("bossbar"), (int) config.getValue("stand-still"), player, () -> {
+                player.teleport(
+                        ctx.getSource().getServer().getWorld(finalDimension),
+                        home.get().getX(), home.get().getY(), home.get().geyZ(),
+                        home.get().getYaw(), home.get().getPitch());
+                recentRequests.put(player.getUuid(), Instant.now().getEpochSecond());
+            });
+        } else {
+            ctx.getSource().sendFeedback(()->Text.literal("Home entry invalid!").formatted(Formatting.RED),false);
+        }
         return 1;
     }
 
@@ -141,7 +155,7 @@ public class FabricHomes implements ModInitializer {
         if (name == null) name = "main";
 
         if (HOME_DATA.get(ctx.getSource().getPlayer()).getHomes().size() >= (int) config.getValue("max-homes")) {
-            ctx.getSource().sendFeedback(Text.literal("Home limit reached!").formatted(Formatting.RED), false);
+            ctx.getSource().sendFeedback(() -> Text.literal("Home limit reached!").formatted(Formatting.RED),false);
             return 1;
         }
 
@@ -157,15 +171,15 @@ public class FabricHomes implements ModInitializer {
                     .stream().filter(v -> v.getName().equals(finalName)).findFirst();
 
             if (home.isEmpty()) {
-                ctx.getSource().sendFeedback(Text.literal("Something went wrong adding the home!").formatted(Formatting.RED), true);
+                ctx.getSource().sendFeedback(() -> Text.literal("Something went wrong adding the home!").formatted(Formatting.RED), true);
                 return 1;
             }
 
-            ctx.getSource().sendFeedback(Text.translatable("Home %s added successfully!",
-                    Text.literal(name).styled(s -> s.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, home.get().toText(ctx.getSource().getServer())))
+            ctx.getSource().sendFeedback(() -> Text.translatable("Home %s added successfully!",
+                    Text.literal(finalName).styled(s -> s.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, home.get().toText(ctx.getSource().getServer())))
                             .withColor(Formatting.GOLD))).formatted(Formatting.LIGHT_PURPLE), false);
         } else {
-            ctx.getSource().sendFeedback(Text.literal("Couldn't add the home (probably already exists)!").formatted(Formatting.RED), false);
+            ctx.getSource().sendFeedback(() -> Text.literal("Couldn't add the home (probably already exists)!").formatted(Formatting.RED), false);
             return 1;
         }
         return 1;
@@ -177,14 +191,14 @@ public class FabricHomes implements ModInitializer {
                     .stream().filter(v -> v.getName().equals(name)).findFirst();
 
             if (home.isPresent()) {
-                ctx.getSource().sendFeedback(Text.literal("Something went wrong removing the home!").formatted(Formatting.RED), true);
+                ctx.getSource().sendFeedback(() -> Text.literal("Something went wrong removing the home!").formatted(Formatting.RED), true);
                 return 1;
             }
 
-            ctx.getSource().sendFeedback(Text.translatable("Home %s deleted successfully!",
+            ctx.getSource().sendFeedback(() -> Text.translatable("Home %s deleted successfully!",
                     Text.literal(name).formatted(Formatting.GOLD)).formatted(Formatting.LIGHT_PURPLE), false);
         } else {
-            ctx.getSource().sendFeedback(Text.literal("Couldn't remove the home!").formatted(Formatting.RED), false);
+            ctx.getSource().sendFeedback(() -> Text.literal("Couldn't remove the home!").formatted(Formatting.RED), false);
             return 1;
         }
         return 1;
@@ -207,7 +221,7 @@ public class FabricHomes implements ModInitializer {
                                         Text.empty().append(Text.literal("Click to teleport.\n").formatted(Formatting.ITALIC))
                                                 .append(h.toText(ctx.getSource().getServer()))))
                                 .withColor(Formatting.GOLD))));
-        ctx.getSource().sendFeedback(Text.translatable("%s/%s:\n", homes.size(), config.getValue("max-homes")).append(TextUtils.join(list, Text.literal(", "))), false);
+        ctx.getSource().sendFeedback(() -> Text.translatable("%s/%s:\n", homes.size(), config.getValue("max-homes")).append(TextUtils.join(list, Text.literal(", "))), false);
         return 1;
     }
 }
