@@ -9,7 +9,7 @@ import net.minecraft.util.Identifier;
 
 public class PlayerComponentInitializer implements EntityComponentInitializer {
     public static final ComponentKey<IHomeDataComponent> HOME_DATA =
-        ComponentRegistryV3.INSTANCE.getOrCreate(new Identifier("fabrichomes", "homes"), IHomeDataComponent.class);
+        ComponentRegistryV3.INSTANCE.getOrCreate(Identifier.of("fabrichomes", "homes"), IHomeDataComponent.class);
 
 
     @Override
