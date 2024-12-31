@@ -3,6 +3,7 @@ package eu.codedsakura.fabrichomes.components;
 import net.fabricmc.fabric.api.util.NbtType;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.RegistryWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,14 +13,14 @@ public class HomeDataComponent implements IHomeDataComponent {
     private int maxHomes;
 
     @Override
-    public void readFromNbt(NbtCompound tag) {
+    public void readFromNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         homes.clear();
         tag.getList("homes", NbtType.COMPOUND).forEach(v -> homes.add(HomeComponent.readFromNbt((NbtCompound) v)));
         maxHomes = tag.getInt("maxHomes");
     }
 
     @Override
-    public void writeToNbt(NbtCompound tag) {
+    public void writeToNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         NbtList homeTag = new NbtList();
         homes.forEach(v -> {
             NbtCompound ct = new NbtCompound();

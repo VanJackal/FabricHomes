@@ -1,6 +1,6 @@
 package eu.codedsakura.fabrichomes.components;
 
-import dev.onyxstudios.cca.api.v3.component.ComponentV3;
+import org.ladysnake.cca.api.v3.component.ComponentV3;
 
 import java.util.List;
 
