@@ -176,7 +176,7 @@ public class FabricHomes implements ModInitializer {
             }
 
             ctx.getSource().sendFeedback(() -> Text.translatable("Home %s added successfully!",
-                    Text.literal(finalName).styled(s -> s.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, home.get().toText(ctx.getSource().getServer())))
+                    Text.literal(finalName).styled(s -> s.withHoverEvent(new HoverEvent.ShowText(home.get().toText(ctx.getSource().getServer())))
                             .withColor(Formatting.GOLD))).formatted(Formatting.LIGHT_PURPLE), false);
         } else {
             ctx.getSource().sendFeedback(() -> Text.literal("Couldn't add the home (probably already exists)!").formatted(Formatting.RED), false);
@@ -216,8 +216,8 @@ public class FabricHomes implements ModInitializer {
         List<Text> list = new ArrayList<>();
         homes.stream().sorted((h1, h2) -> h1.getName().compareToIgnoreCase(h2.getName())).forEach(h ->
                 list.add(Text.literal(h.getName()).styled(s ->
-                        s.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/home " + h.getName()))
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        s.withClickEvent(new ClickEvent.RunCommand("/home " + h.getName()))
+                                .withHoverEvent(new HoverEvent.ShowText(
                                         Text.empty().append(Text.literal("Click to teleport.\n").formatted(Formatting.ITALIC))
                                                 .append(h.toText(ctx.getSource().getServer()))))
                                 .withColor(Formatting.GOLD))));

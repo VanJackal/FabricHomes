@@ -7,6 +7,7 @@ import net.minecraft.registry.RegistryWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class HomeDataComponent implements IHomeDataComponent {
     private final List<HomeComponent> homes = new ArrayList<>();
@@ -14,9 +15,14 @@ public class HomeDataComponent implements IHomeDataComponent {
 
     @Override
     public void readFromNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
-        homes.clear();
-        tag.getList("homes", NbtType.COMPOUND).forEach(v -> homes.add(HomeComponent.readFromNbt((NbtCompound) v)));
-        maxHomes = tag.getInt("maxHomes");
+        try {
+            homes.clear();
+            tag.getList("homes").get().forEach(v -> homes.add(HomeComponent.readFromNbt((NbtCompound) v)));
+            maxHomes = tag.getInt("maxHomes").get();
+        } catch (NoSuchElementException e) {
+            System.out.println(e.getMessage());
+            System.out.println("failed to read home data");
+        }
     }
 
     @Override
