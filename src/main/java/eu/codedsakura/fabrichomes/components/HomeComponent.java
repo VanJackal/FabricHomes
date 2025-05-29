@@ -7,6 +7,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 
+import java.util.NoSuchElementException;
+
 import static eu.codedsakura.mods.TextUtils.valueRepr;
 
 public class HomeComponent implements INamedDirectionalPointComponent {
@@ -35,15 +37,15 @@ public class HomeComponent implements INamedDirectionalPointComponent {
         this.dim = dim;
     }
 
-    public static HomeComponent readFromNbt(NbtCompound tag) {
+    public static HomeComponent readFromNbt(NbtCompound tag) throws NoSuchElementException {
         return new HomeComponent(
-            tag.getDouble("x"),
-            tag.getDouble("y"),
-            tag.getDouble("z"),
-            tag.getFloat("pitch"),
-            tag.getFloat("yaw"),
-            Identifier.tryParse(tag.getString("dim")),
-            tag.getString("name")
+                tag.getDouble("x").get(),
+                tag.getDouble("y").get(),
+                tag.getDouble("z").get(),
+                tag.getFloat("pitch").get(),
+                tag.getFloat("yaw").get(),
+                Identifier.tryParse(tag.getString("dim").get()),
+                tag.getString("name").get()
         );
     }
 
