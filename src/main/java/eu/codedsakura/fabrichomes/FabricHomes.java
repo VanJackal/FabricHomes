@@ -9,7 +9,6 @@ import eu.codedsakura.fabrichomes.components.HomeComponent;
 import eu.codedsakura.mods.ConfigUtils;
 import eu.codedsakura.mods.TeleportUtils;
 import eu.codedsakura.mods.TextUtils;
-import eu.codedsakura.mods.fpapiutils.FPAPIUtilsWrapper;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
@@ -29,8 +28,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static eu.codedsakura.fabrichomes.components.PlayerComponentInitializer.HOME_DATA;
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.server.command.CommandManager.*;
 
 public class FabricHomes implements ModInitializer {
     public static final Logger logger = LogManager.getLogger("FabricHomes");
@@ -56,38 +54,31 @@ public class FabricHomes implements ModInitializer {
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) -> {
             dispatcher.register(literal("home")
-                    .requires(FPAPIUtilsWrapper.require("fabrichomes.home", true))
                     .executes(ctx -> homeInit(ctx, null))
                     .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                             .executes(ctx -> homeInit(ctx, StringArgumentType.getString(ctx, "name")))));
 
             dispatcher.register(literal("sethome")
-                    .requires(FPAPIUtilsWrapper.require("fabrichomes.sethome", true))
                     .executes(ctx -> homeSet(ctx, null))
                     .then(argument("name", StringArgumentType.greedyString())
                             .executes(ctx -> homeSet(ctx, StringArgumentType.getString(ctx, "name")))));
 
             dispatcher.register(literal("delhome")
-                            .requires(FPAPIUtilsWrapper.require("fabrichomes.delhome", true))
                             .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                                     .executes(ctx -> homeDel(ctx, StringArgumentType.getString(ctx, "name")))));
 
             dispatcher.register(literal("homes")
                     .executes(this::homeList)
                     .then(literal("list")
-                            .requires(FPAPIUtilsWrapper.require("fabrichomes.homes.list", true))
                             .executes(this::homeList)
                             .then(argument("player", EntityArgumentType.player())
-                                    .requires(FPAPIUtilsWrapper.require("fabrichomes.homes.list_player", 2))
                                     .executes(ctx -> homeList(ctx, EntityArgumentType.getPlayer(ctx, "player")))))
                     .then(literal("gui").requires(req -> false)
-                            .requires(FPAPIUtilsWrapper.require("fabrichomes.homes.gui", true))
                             .executes(ctx -> 0)) // TODO
                     .then(literal("delete")
-                            .requires(FPAPIUtilsWrapper.require("fabrichomes.homes.delete", true))
                             .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                                     .executes(ctx -> homeDel(ctx, StringArgumentType.getString(ctx, "name")))))
-                    .then(config.generateCommand("config", FPAPIUtilsWrapper.require("fabrichomes.confg", 2))));
+                    .then(config.generateCommand("config", requirePermissionLevel(4))));
         });
     }
 
@@ -206,9 +197,6 @@ public class FabricHomes implements ModInitializer {
 
 
     int homeList(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
-        if(!FPAPIUtilsWrapper.check(ctx.getSource(), "fabrichomes.homes.list", true)) {
-            return 0;
-        }
         return homeList(ctx, ctx.getSource().getPlayer());
     }
     int homeList(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {

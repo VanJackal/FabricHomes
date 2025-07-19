@@ -18,7 +18,7 @@ import java.util.TimerTask;
 
 public class TeleportUtils {
     public static void genericTeleport(boolean bossBar, double standStillTime, ServerPlayerEntity who, Runnable onCounterDone) {
-        MinecraftServer server = who.server;
+        MinecraftServer server = who.getServer();
         final double[] counter = {standStillTime};
         final Vec3d[] lastPos = {who.getPos()};
         CommandBossBar standStillBar = null;

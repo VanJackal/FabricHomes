@@ -1,9 +1,7 @@
 package eu.codedsakura.fabrichomes.components;
 
-import net.fabricmc.fabric.api.util.NbtType;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +12,11 @@ public class HomeDataComponent implements IHomeDataComponent {
     private int maxHomes;
 
     @Override
-    public void readFromNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
+    public void readData(ReadView readView) {
         try {
             homes.clear();
-            tag.getList("homes").get().forEach(v -> homes.add(HomeComponent.readFromNbt((NbtCompound) v)));
-            maxHomes = tag.getInt("maxHomes").get();
+            readView.getListReadView("homes").forEach(v -> homes.add(HomeComponent.readFromNbt(v)));
+            maxHomes = readView.getInt("maxHomes", 1);
         } catch (NoSuchElementException e) {
             System.out.println(e.getMessage());
             System.out.println("failed to read home data");
@@ -26,15 +24,13 @@ public class HomeDataComponent implements IHomeDataComponent {
     }
 
     @Override
-    public void writeToNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
-        NbtList homeTag = new NbtList();
+    public void writeData(WriteView writeView) {
+        writeView.remove("homes");
+        var listView = writeView.getList("homes");
         homes.forEach(v -> {
-            NbtCompound ct = new NbtCompound();
-            v.writeToNbt(ct);
-            homeTag.add(ct);
+            v.writeToNbt(listView.add());
         });
-        tag.put("homes", homeTag);
-        tag.putInt("maxHomes", maxHomes);
+        writeView.putInt("maxHomes", maxHomes);
     }
 
     @Override public List<HomeComponent> getHomes() { return homes; }
