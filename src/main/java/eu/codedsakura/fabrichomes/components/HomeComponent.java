@@ -2,6 +2,8 @@ package eu.codedsakura.fabrichomes.components;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -37,19 +39,19 @@ public class HomeComponent implements INamedDirectionalPointComponent {
         this.dim = dim;
     }
 
-    public static HomeComponent readFromNbt(NbtCompound tag) throws NoSuchElementException {
+    public static HomeComponent readFromNbt(ReadView tag) throws NoSuchElementException {
         return new HomeComponent(
-                tag.getDouble("x").get(),
-                tag.getDouble("y").get(),
-                tag.getDouble("z").get(),
-                tag.getFloat("pitch").get(),
-                tag.getFloat("yaw").get(),
-                Identifier.tryParse(tag.getString("dim").get()),
-                tag.getString("name").get()
+                tag.getDouble("x",0),
+                tag.getDouble("y",0),
+                tag.getDouble("z",0),
+                tag.getFloat("pitch",0),
+                tag.getFloat("yaw",0),
+                Identifier.tryParse(tag.getString("dim", "minecraft:overworld")),
+                tag.getString("name","riplmao")
         );
     }
 
-    public void writeToNbt(NbtCompound tag) {
+    public void writeToNbt(WriteView tag) {
         tag.putDouble("x", x);
         tag.putDouble("y", y);
         tag.putDouble("z", z);
