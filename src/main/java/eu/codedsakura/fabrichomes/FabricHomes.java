@@ -128,14 +128,11 @@ public class FabricHomes implements ModInitializer {
         }
 
         if(dimension != null) {
-            RegistryKey<World> finalDimension = dimension;
-            TeleportUtils.genericTeleport((boolean) config.getValue("bossbar"), (int) config.getValue("stand-still"), player, () -> {
-                HomeComponent homeComponent = home.get();
-                player.teleport(ctx.getSource().getServer().getWorld(finalDimension),
+            HomeComponent homeComponent = home.get();
+                player.teleport(ctx.getSource().getServer().getWorld(dimension),
                         homeComponent.getX(),homeComponent.getY(),homeComponent.geyZ(),
                         Set.of(),homeComponent.getYaw(),homeComponent.getPitch(),false);
                 recentRequests.put(player.getUuid(), Instant.now().getEpochSecond());
-            });
         } else {
             ctx.getSource().sendFeedback(()->Text.literal("Home entry invalid!").formatted(Formatting.RED),false);
         }
