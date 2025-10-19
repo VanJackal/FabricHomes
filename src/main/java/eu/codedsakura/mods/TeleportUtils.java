@@ -18,29 +18,8 @@ import java.util.TimerTask;
 
 public class TeleportUtils {
     public static void genericTeleport(boolean bossBar, double standStillTime, ServerPlayerEntity who, Runnable onCounterDone) {
-        MinecraftServer server = who.getServer();
         final double[] counter = {standStillTime};
-        final Vec3d[] lastPos = {who.getPos()};
-        CommandBossBar standStillBar = null;
-        if (bossBar) {
-//            Collection<CommandBossBar> bossBars = server.getBossBarManager().getAll();
-//            bossBars.forEach(commandBossBar -> server.getBossBarManager().remove(commandBossBar));
-
-            standStillBar = server.getBossBarManager().add(Identifier.of("standstill-" + who.getUuidAsString()), Text.empty());
-            standStillBar.addPlayer(who);
-            standStillBar.setColor(BossBar.Color.PINK);
-
-//            bossBars.forEach(commandBossBar -> {
-//                CommandBossBar newBossBar = server.getBossBarManager().add(commandBossBar.getId(), commandBossBar.getName());
-//                newBossBar.addPlayers(commandBossBar.getPlayers());
-//                newBossBar.setMaxValue(commandBossBar.getMaxValue());
-//                newBossBar.setValue(commandBossBar.getValue());
-//                newBossBar.setVisible(commandBossBar.isVisible());
-//                newBossBar.setColor(commandBossBar.getColor());
-//            });
-        }
         who.networkHandler.sendPacket(new TitleFadeS2CPacket(0, 10, 5));
-        CommandBossBar finalStandStillBar = standStillBar;
 
         final ServerPlayerEntity[] whoFinal = {who};
         Timer timer = new Timer();
@@ -48,12 +27,7 @@ public class TeleportUtils {
             @Override
             public void run() {
                 if (counter[0] == 0) {
-                    if (bossBar) {
-                        finalStandStillBar.removePlayer(whoFinal[0]);
-                        server.getBossBarManager().remove(finalStandStillBar);
-                    } else {
-                        whoFinal[0].sendMessage(Text.literal("Teleporting!").formatted(Formatting.LIGHT_PURPLE), true);
-                    }
+                    whoFinal[0].sendMessage(Text.literal("Teleporting!").formatted(Formatting.LIGHT_PURPLE), true);
                     new Timer().schedule(new TimerTask() {
                         @Override
                         public void run() {
@@ -61,28 +35,10 @@ public class TeleportUtils {
                         }
                     }, 500);
                     timer.cancel();
-                    server.submit(onCounterDone);
                     return;
                 }
 
-                Vec3d currPos = whoFinal[0].getPos();
-                if (whoFinal[0].isRemoved()) {
-                    whoFinal[0] = server.getPlayerManager().getPlayer(whoFinal[0].getUuid());
-                    assert whoFinal[0] != null;
-                } else if (lastPos[0].equals(currPos)) {
-                    counter[0] -= .25;
-                } else {
-                    lastPos[0] = currPos;
-                    counter[0] = standStillTime;
-                }
 
-                if (bossBar) {
-                    finalStandStillBar.setPercent((float) (counter[0] / standStillTime));
-                } else {
-                    whoFinal[0].sendMessage(Text.literal("Stand still for ").formatted(Formatting.LIGHT_PURPLE)
-                            .append(Text.literal(Integer.toString((int) Math.floor(counter[0] + 1))).formatted(Formatting.GOLD))
-                            .append(Text.literal(" more seconds!").formatted(Formatting.LIGHT_PURPLE)), true);
-                }
                 whoFinal[0].networkHandler.sendPacket(new SubtitleS2CPacket(Text.literal("Please stand still...")
                         .formatted(Formatting.RED, Formatting.ITALIC)));
                 whoFinal[0].networkHandler.sendPacket(new TitleS2CPacket(Text.literal("Teleporting!")
