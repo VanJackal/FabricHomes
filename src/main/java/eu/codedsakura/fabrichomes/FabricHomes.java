@@ -13,6 +13,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.command.permission.PermissionLevel;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -78,7 +79,8 @@ public class FabricHomes implements ModInitializer {
                     .then(literal("delete")
                             .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                                     .executes(ctx -> homeDel(ctx, StringArgumentType.getString(ctx, "name")))))
-                    .then(config.generateCommand("config", requirePermissionLevel(4))));
+                    //.then(config.generateCommand("config",requirePermissionLevel(4)))
+            );
         });
     }
 
