@@ -1,9 +1,9 @@
 package eu.codedsakura.fabrichomes.components;
 
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.MutableText;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
 
 public interface INamedDirectionalPointComponent {
     double getX();
@@ -12,7 +12,7 @@ public interface INamedDirectionalPointComponent {
     float getPitch();
     float getYaw();
     String getName();
-    Vec3d getCoords();
+    Vec3 getCoords();
     Identifier getDimID();
-    MutableText toText(MinecraftServer server);
+    MutableComponent toText(MinecraftServer server);
 }

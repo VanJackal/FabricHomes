@@ -5,11 +5,11 @@ import org.ladysnake.cca.api.v3.component.ComponentRegistryV3;
 import org.ladysnake.cca.api.v3.entity.EntityComponentFactoryRegistry;
 import org.ladysnake.cca.api.v3.entity.EntityComponentInitializer;
 import org.ladysnake.cca.api.v3.entity.RespawnCopyStrategy;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public class PlayerComponentInitializer implements EntityComponentInitializer {
     public static final ComponentKey<IHomeDataComponent> HOME_DATA =
-        ComponentRegistryV3.INSTANCE.getOrCreate(Identifier.of("fabrichomes", "homes"), IHomeDataComponent.class);
+        ComponentRegistryV3.INSTANCE.getOrCreate(Identifier.fromNamespaceAndPath("fabrichomes", "homes"), IHomeDataComponent.class);
 
 
     @Override

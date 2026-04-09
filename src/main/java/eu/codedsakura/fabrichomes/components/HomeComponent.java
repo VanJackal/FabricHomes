@@ -1,13 +1,12 @@
 package eu.codedsakura.fabrichomes.components;
 
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.NoSuchElementException;
 
@@ -29,7 +28,7 @@ public class HomeComponent implements INamedDirectionalPointComponent {
         this.dim = dim;
     }
 
-    public HomeComponent(Vec3d pos, float pitch, float yaw, Identifier dim, String name) {
+    public HomeComponent(Vec3 pos, float pitch, float yaw, Identifier dim, String name) {
         this.x = pos.x;
         this.y = pos.y;
         this.z = pos.z;
@@ -39,19 +38,19 @@ public class HomeComponent implements INamedDirectionalPointComponent {
         this.dim = dim;
     }
 
-    public static HomeComponent readFromNbt(ReadView tag) throws NoSuchElementException {
+    public static HomeComponent readFromNbt(ValueInput tag) throws NoSuchElementException {
         return new HomeComponent(
-                tag.getDouble("x",0),
-                tag.getDouble("y",0),
-                tag.getDouble("z",0),
-                tag.getFloat("pitch",0),
-                tag.getFloat("yaw",0),
-                Identifier.tryParse(tag.getString("dim", "minecraft:overworld")),
-                tag.getString("name","riplmao")
+                tag.getDoubleOr("x",0),
+                tag.getDoubleOr("y",0),
+                tag.getDoubleOr("z",0),
+                tag.getFloatOr("pitch",0),
+                tag.getFloatOr("yaw",0),
+                Identifier.tryParse(tag.getStringOr("dim", "minecraft:overworld")),
+                tag.getStringOr("name","riplmao")
         );
     }
 
-    public void writeToNbt(WriteView tag) {
+    public void writeToNbt(ValueOutput tag) {
         tag.putDouble("x", x);
         tag.putDouble("y", y);
         tag.putDouble("z", z);
@@ -67,12 +66,12 @@ public class HomeComponent implements INamedDirectionalPointComponent {
     @Override public float getPitch()  { return pitch; }
     @Override public float getYaw()    { return yaw;   }
     @Override public String getName()   { return name;  }
-    @Override public Vec3d getCoords()  { return new Vec3d(x, y, z); }
+    @Override public Vec3 getCoords()  { return new Vec3(x, y, z); }
     @Override public Identifier getDimID() { return dim; }
 
     @Override
-    public MutableText toText(MinecraftServer server) {
-        return Text.translatable("%s\n%s; %s; %s\n%s; %s\n%s",
+    public MutableComponent toText(MinecraftServer server) {
+        return Component.translatable("%s\n%s; %s; %s\n%s; %s\n%s",
                 valueRepr("Name", name),
                 valueRepr("X", x), valueRepr("Y", y), valueRepr("Z", z),
                 valueRepr("Yaw", yaw), valueRepr("Pitch", pitch),
