@@ -6,8 +6,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,8 +17,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.function.Predicate;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import net.minecraft.commands.Commands;
 
 @SuppressWarnings({"rawtypes", "unchecked"}) // :'(
 public class ConfigUtils {
@@ -63,24 +62,24 @@ public class ConfigUtils {
         }
     }
 
-    public LiteralArgumentBuilder<ServerCommandSource> generateCommand(String commandName, Predicate<ServerCommandSource> requirement) {
-        LiteralArgumentBuilder<ServerCommandSource> out =
-                literal(commandName).requires(requirement)
+    public LiteralArgumentBuilder<CommandSourceStack> generateCommand(String commandName, Predicate<CommandSourceStack> requirement) {
+        LiteralArgumentBuilder<CommandSourceStack> out =
+                Commands.literal(commandName).requires(requirement)
                         .executes(ctx -> {
                             values.stream().filter(v -> v.command != null).forEach(value ->
-                                    ctx.getSource().sendFeedback(() -> Text.translatable(value.command.getterText, value.value), false));
+                                    ctx.getSource().sendSystemMessage(Component.translatable(value.command.getterText, value.value)));
                             return 1;
                         });
         values.stream().filter(v -> v.command != null).forEach(value ->
-                out.then(literal(value.name)
+                out.then(Commands.literal(value.name)
                         .executes(ctx -> {
-                            ctx.getSource().sendFeedback(() -> Text.translatable(value.command.getterText, value.value), false);
+                            ctx.getSource().sendSystemMessage(Component.translatable(value.command.getterText, value.value));
                             return 1;
                         })
-                        .then(argument(value.name, value.getArgumentType()).suggests(value.suggestions)
+                        .then(Commands.argument(value.name, value.getArgumentType()).suggests(value.suggestions)
                                 .executes(ctx -> {
                                     value.value = value.parseArgumentValue(ctx);
-                                    ((CommandContext<ServerCommandSource>) ctx).getSource().sendFeedback(() -> Text.translatable(value.command.setterText, value.value), true);
+                                    ((CommandContext<CommandSourceStack>) ctx).getSource().sendSystemMessage(Component.translatable(value.command.setterText, value.value));
                                     this.save();
                                     return 1;
                                 }))));
@@ -113,7 +112,7 @@ public class ConfigUtils {
             if (comment != null) props.setProperty(name + ".comment", comment);
         }
         public abstract ArgumentType<?> getArgumentType();
-        public abstract T parseArgumentValue(CommandContext<ServerCommandSource> ctx);
+        public abstract T parseArgumentValue(CommandContext<CommandSourceStack> ctx);
     }
 
     public static class IntegerConfigValue extends IConfigValue<Integer> {
@@ -142,7 +141,7 @@ public class ConfigUtils {
             return IntegerArgumentType.integer(limits.min, limits.max);
         }
         @Override
-        public Integer parseArgumentValue(CommandContext<ServerCommandSource> ctx) {
+        public Integer parseArgumentValue(CommandContext<CommandSourceStack> ctx) {
             return IntegerArgumentType.getInteger(ctx, name);
         }
 
@@ -181,7 +180,7 @@ public class ConfigUtils {
         }
 
         @Override
-        public Boolean parseArgumentValue(CommandContext<ServerCommandSource> ctx) {
+        public Boolean parseArgumentValue(CommandContext<CommandSourceStack> ctx) {
             return BoolArgumentType.getBool(ctx, name);
         }
     }

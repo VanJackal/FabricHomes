@@ -1,7 +1,7 @@
 package eu.codedsakura.fabrichomes.components;
 
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,11 +12,11 @@ public class HomeDataComponent implements IHomeDataComponent {
     private int maxHomes;
 
     @Override
-    public void readData(ReadView readView) {
+    public void readData(ValueInput readView) {
         try {
             homes.clear();
-            readView.getListReadView("homes").forEach(v -> homes.add(HomeComponent.readFromNbt(v)));
-            maxHomes = readView.getInt("maxHomes", 1);
+            readView.childrenListOrEmpty("homes").forEach(v -> homes.add(HomeComponent.readFromNbt(v)));
+            maxHomes = readView.getIntOr("maxHomes", 1);
         } catch (NoSuchElementException e) {
             System.out.println(e.getMessage());
             System.out.println("failed to read home data");
@@ -24,11 +24,11 @@ public class HomeDataComponent implements IHomeDataComponent {
     }
 
     @Override
-    public void writeData(WriteView writeView) {
-        writeView.remove("homes");
-        var listView = writeView.getList("homes");
+    public void writeData(ValueOutput writeView) {
+        writeView.discard("homes");
+        var listView = writeView.childrenList("homes");
         homes.forEach(v -> {
-            v.writeToNbt(listView.add());
+            v.writeToNbt(listView.addChild());
         });
         writeView.putInt("maxHomes", maxHomes);
     }

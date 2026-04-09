@@ -7,20 +7,25 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import eu.codedsakura.fabrichomes.components.HomeComponent;
 import eu.codedsakura.mods.ConfigUtils;
-import eu.codedsakura.mods.TeleportUtils;
 import eu.codedsakura.mods.TextUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.command.permission.PermissionLevel;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.*;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.permissions.PermissionLevel;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,11 +34,13 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static eu.codedsakura.fabrichomes.components.PlayerComponentInitializer.HOME_DATA;
-import static net.minecraft.server.command.CommandManager.*;
 
 public class FabricHomes implements ModInitializer {
     public static final Logger logger = LogManager.getLogger("FabricHomes");
     private static final String CONFIG_NAME = "FabricHomes.properties";
+
+    private static final Style GoldStyle = Style.EMPTY.withColor(ChatFormatting.GOLD);
+    private static final Style LightPurpleStyle = Style.EMPTY.withColor(ChatFormatting.LIGHT_PURPLE);
 
     private final HashMap<UUID, Long> recentRequests = new HashMap<>();
     private ConfigUtils config;
@@ -54,48 +61,48 @@ public class FabricHomes implements ModInitializer {
         }));
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) -> {
-            dispatcher.register(literal("home")
+            dispatcher.register(Commands.literal("home")
                     .executes(ctx -> homeInit(ctx, null))
-                    .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
+                    .then(Commands.argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                             .executes(ctx -> homeInit(ctx, StringArgumentType.getString(ctx, "name")))));
 
-            dispatcher.register(literal("sethome")
+            dispatcher.register(Commands.literal("sethome")
                     .executes(ctx -> homeSet(ctx, null))
-                    .then(argument("name", StringArgumentType.greedyString())
+                    .then(Commands.argument("name", StringArgumentType.greedyString())
                             .executes(ctx -> homeSet(ctx, StringArgumentType.getString(ctx, "name")))));
 
-            dispatcher.register(literal("delhome")
-                            .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
+            dispatcher.register(Commands.literal("delhome")
+                            .then(Commands.argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                                     .executes(ctx -> homeDel(ctx, StringArgumentType.getString(ctx, "name")))));
 
-            dispatcher.register(literal("homes")
+            dispatcher.register(Commands.literal("homes")
                     .executes(this::homeList)
-                    .then(literal("list")
+                    .then(Commands.literal("list")
                             .executes(this::homeList)
-                            .then(argument("player", EntityArgumentType.player())
-                                    .executes(ctx -> homeList(ctx, EntityArgumentType.getPlayer(ctx, "player")))))
-                    .then(literal("gui").requires(req -> false)
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .executes(ctx -> homeList(ctx, EntityArgument.getPlayer(ctx, "player")))))
+                    .then(Commands.literal("gui").requires(req -> false)
                             .executes(ctx -> 0)) // TODO
-                    .then(literal("delete")
-                            .then(argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
+                    .then(Commands.literal("delete")
+                            .then(Commands.argument("name", StringArgumentType.greedyString()).suggests(this::getHomeSuggestions)
                                     .executes(ctx -> homeDel(ctx, StringArgumentType.getString(ctx, "name")))))
                     //.then(config.generateCommand("config",requirePermissionLevel(4)))
             );
         });
     }
 
-    private boolean checkCooldown(ServerPlayerEntity tFrom) {
-        if (recentRequests.containsKey(tFrom.getUuid())) {
-            long diff = Instant.now().getEpochSecond() - recentRequests.get(tFrom.getUuid());
+    private boolean checkCooldown(ServerPlayer tFrom) {
+        if (recentRequests.containsKey(tFrom.getUUID())) {
+            long diff = Instant.now().getEpochSecond() - recentRequests.get(tFrom.getUUID());
             if (diff < (int) config.getValue("cooldown")) {
-                tFrom.sendMessage(Text.translatable("You cannot make teleport home for %s more seconds!", String.valueOf((int) config.getValue("cooldown") - diff)).formatted(Formatting.RED), false);
+                tFrom.sendSystemMessage(Component.translatable("You cannot make teleport home for %s more seconds!", String.valueOf((int) config.getValue("cooldown") - diff)), false);
                 return true;
             }
         }
         return false;
     }
 
-    private CompletableFuture<Suggestions> getHomeSuggestions(CommandContext<ServerCommandSource> context, SuggestionsBuilder builder) throws CommandSyntaxException {
+    private CompletableFuture<Suggestions> getHomeSuggestions(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) throws CommandSyntaxException {
         String start = builder.getRemaining().toLowerCase();
         HOME_DATA.get(context.getSource().getPlayer()).getHomes().stream()
                 .map(HomeComponent::getName)
@@ -105,8 +112,8 @@ public class FabricHomes implements ModInitializer {
         return builder.buildFuture();
     }
 
-    int homeInit(CommandContext<ServerCommandSource> ctx, String name) throws CommandSyntaxException {
-        ServerPlayerEntity player = ctx.getSource().getPlayer();
+    int homeInit(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayer();
         if (name == null) name = "main";
 
         String finalName = name;
@@ -114,46 +121,47 @@ public class FabricHomes implements ModInitializer {
                 .stream().filter(v -> v.getName().equals(finalName)).findFirst();
 
         if (home.isEmpty()) {
-            ctx.getSource().sendFeedback(() -> Text.literal("This home does not exist").formatted(Formatting.RED), false);
+            ctx.getSource().sendFailure(Component.literal("This home does not exist"));
             return 0;
         }
 
         if (checkCooldown(player)) return 1;
 
         Identifier dimId = home.get().getDimID();
-        RegistryKey<World> dimension = null;
-        //not sure if this is the right way to do this, but it should work
-        for (RegistryKey<World> dim : ctx.getSource().getServer().getWorldRegistryKeys()){
-            if (dim.getValue().equals(dimId) ) {
-                dimension = dim;
-            }
-        }
+        ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, dimId);
+        ServerLevel level = ctx.getSource().getServer().getLevel(dimension);
 
-        if(dimension != null) {
+        if(level != null) {
             HomeComponent homeComponent = home.get();
-                player.teleport(ctx.getSource().getServer().getWorld(dimension),
-                        homeComponent.getX(),homeComponent.getY(),homeComponent.geyZ(),
-                        Set.of(),homeComponent.getYaw(),homeComponent.getPitch(),false);
-                recentRequests.put(player.getUuid(), Instant.now().getEpochSecond());
+            TeleportTransition transition = new TeleportTransition(
+                    level,
+                    new Vec3(homeComponent.getX(), homeComponent.getY(), homeComponent.geyZ()),
+                    Vec3.ZERO,
+                    homeComponent.getYaw(),
+                    homeComponent.getPitch(),
+                    TeleportTransition.DO_NOTHING
+            );
+            player.teleport(transition);
+            recentRequests.put(player.getUUID(), Instant.now().getEpochSecond());
         } else {
-            ctx.getSource().sendFeedback(()->Text.literal("Home entry invalid!").formatted(Formatting.RED),false);
+            ctx.getSource().sendFailure(Component.literal("Home entry invalid!"));
         }
         return 1;
     }
 
-    int homeSet(CommandContext<ServerCommandSource> ctx, String name) throws CommandSyntaxException {
+    int homeSet(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
         if (name == null) name = "main";
 
         if (HOME_DATA.get(ctx.getSource().getPlayer()).getHomes().size() >= (int) config.getValue("max-homes")) {
-            ctx.getSource().sendFeedback(() -> Text.literal("Home limit reached!").formatted(Formatting.RED),false);
+            ctx.getSource().sendFailure(Component.literal("Home limit reached!"));
             return 1;
         }
 
         if (HOME_DATA.get(ctx.getSource().getPlayer()).addHome(new HomeComponent(
                 ctx.getSource().getPosition(),
-                ctx.getSource().getPlayer().getPitch(),
-                ctx.getSource().getPlayer().getYaw(),
-                ctx.getSource().getWorld().getRegistryKey().getValue(),
+                ctx.getSource().getPlayer().getXRot(),
+                ctx.getSource().getPlayer().getYRot(),
+                ctx.getSource().getLevel().dimension().identifier(),
                 name))) {
 
             String finalName = name;
@@ -161,54 +169,57 @@ public class FabricHomes implements ModInitializer {
                     .stream().filter(v -> v.getName().equals(finalName)).findFirst();
 
             if (home.isEmpty()) {
-                ctx.getSource().sendFeedback(() -> Text.literal("Something went wrong adding the home!").formatted(Formatting.RED), true);
+                ctx.getSource().sendFailure(Component.literal("Something went wrong adding the home!"));
                 return 1;
             }
 
-            ctx.getSource().sendFeedback(() -> Text.translatable("Home %s added successfully!",
-                    Text.literal(finalName).styled(s -> s.withHoverEvent(new HoverEvent.ShowText(home.get().toText(ctx.getSource().getServer())))
-                            .withColor(Formatting.GOLD))).formatted(Formatting.LIGHT_PURPLE), false);
+            Style hover = Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(home.get().toText(ctx.getSource().getServer())));
+
+            ctx.getSource().sendFailure(Component.translatable("Home %s added successfully!",
+                    Component.literal(finalName).setStyle(hover
+                            .withColor(ChatFormatting.GOLD))).setStyle(LightPurpleStyle));
         } else {
-            ctx.getSource().sendFeedback(() -> Text.literal("Couldn't add the home (probably already exists)!").formatted(Formatting.RED), false);
+            ctx.getSource().sendFailure(Component.literal("Couldn't add the home (probably already exists)!"));
             return 1;
         }
         return 1;
     }
 
-    int homeDel(CommandContext<ServerCommandSource> ctx, String name) throws CommandSyntaxException {
+    int homeDel(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
         if (HOME_DATA.get(ctx.getSource().getPlayer()).removeHome(name)) {
             Optional<HomeComponent> home = HOME_DATA.get(ctx.getSource().getPlayer()).getHomes()
                     .stream().filter(v -> v.getName().equals(name)).findFirst();
 
             if (home.isPresent()) {
-                ctx.getSource().sendFeedback(() -> Text.literal("Something went wrong removing the home!").formatted(Formatting.RED), true);
+                ctx.getSource().sendFailure(Component.literal("Something went wrong removing the home!"));
                 return 1;
             }
 
-            ctx.getSource().sendFeedback(() -> Text.translatable("Home %s deleted successfully!",
-                    Text.literal(name).formatted(Formatting.GOLD)).formatted(Formatting.LIGHT_PURPLE), false);
+            ctx.getSource().sendSystemMessage(Component.translatable("Home %s deleted successfully!",
+                    Component.literal(name).setStyle(GoldStyle).setStyle(LightPurpleStyle)));
         } else {
-            ctx.getSource().sendFeedback(() -> Text.literal("Couldn't remove the home!").formatted(Formatting.RED), false);
+            ctx.getSource().sendFailure(Component.literal("Couldn't remove the home!"));
             return 1;
         }
         return 1;
     }
 
 
-    int homeList(CommandContext<ServerCommandSource> ctx) throws CommandSyntaxException {
+    int homeList(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return homeList(ctx, ctx.getSource().getPlayer());
     }
-    int homeList(CommandContext<ServerCommandSource> ctx, ServerPlayerEntity player) {
+    int homeList(CommandContext<CommandSourceStack> ctx, ServerPlayer player) {
         List<HomeComponent> homes = HOME_DATA.get(player).getHomes();
-        List<Text> list = new ArrayList<>();
+        List<MutableComponent> list = new ArrayList<>();
         homes.stream().sorted((h1, h2) -> h1.getName().compareToIgnoreCase(h2.getName())).forEach(h ->
-                list.add(Text.literal(h.getName()).styled(s ->
-                        s.withClickEvent(new ClickEvent.RunCommand("/home " + h.getName()))
+
+                list.add(Component.literal(h.getName()).setStyle(Style.EMPTY
+                        .withClickEvent(new ClickEvent.RunCommand("/home " + h.getName()))
                                 .withHoverEvent(new HoverEvent.ShowText(
-                                        Text.empty().append(Text.literal("Click to teleport.\n").formatted(Formatting.ITALIC))
+                                        Component.empty().append(Component.literal("Click to teleport.\n").withStyle(ChatFormatting.ITALIC))
                                                 .append(h.toText(ctx.getSource().getServer()))))
-                                .withColor(Formatting.GOLD))));
-        ctx.getSource().sendFeedback(() -> Text.translatable("%s/%s:\n", homes.size(), config.getValue("max-homes")).append(TextUtils.join(list, Text.literal(", "))), false);
+                                .withColor(ChatFormatting.GOLD))));
+        ctx.getSource().sendSystemMessage(Component.translatable("%s/%s:\n", homes.size(), config.getValue("max-homes")).append(TextUtils.join(list, Component.literal(", "))));
         return 1;
     }
 }
