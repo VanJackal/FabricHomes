@@ -10,11 +10,11 @@
     "Junner"
   ],
   "contact": {
-    "website": "http://mods.codedsakura.eu",
-    "homepage": "http://codedsakura.eu",
-    "sources": "https://github.com/CodedSakura/FabricHomes",
-    "repo": "https://github.com/CodedSakura/FabricHomes",
-    "issues": "https://github.com/CodedSakura/FabricHomes/issues"
+    "website": "https://github.com/VanJackal/FabricHomes",
+    "homepage": "https://github.com/VanJackal/FabricHomes",
+    "sources": "https://github.com/VanJackal/FabricHomes",
+    "repo": "https://github.com/VanJackal/FabricHomes",
+    "issues": "https://github.com/VanJackal/FabricHomes"
   },
   "license": "ISC",
   "icon": "assets/FabricHomes/icon.png",
