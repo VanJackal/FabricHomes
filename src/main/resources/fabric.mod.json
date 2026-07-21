@@ -28,8 +28,16 @@
   "custom": {
     "cardinal-components": ["fabrichomes:homes"]
   },
+  "jars": [
+    {
+      "file": "META-INF/jars/cardinal-components-base-8.0.0-alpha.5+26.1.jar"
+    },
+    {
+      "file": "META-INF/jars/cardinal-components-entity-8.0.0-alpha.5+26.1.jar"
+    }
+  ],
   "depends": {
     "fabricloader": "*",
-    "minecraft": "~26.2"
+    "minecraft": "~26.1.2"
   }
 }
