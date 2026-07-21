@@ -5,7 +5,9 @@
   "name": "FabricHomes",
   "description": "FabricHomes is a small, server-side Fabric mod that adds /home command and its counterparts",
   "authors": [
-    "CodedSakura"
+    "CodedSakura",
+    "VanJackal",
+    "Junner"
   ],
   "contact": {
     "website": "http://mods.codedsakura.eu",
