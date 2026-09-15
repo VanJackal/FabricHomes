@@ -12,7 +12,7 @@ repositories {
         name = "Ladysnake Mods"
         url = 'https://maven.ladysnake.org/releases'
     }
-    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    maven { url = 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
 
 dependencies {
